@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>친목회 재정 관리</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f5f5f5;color:#222;padding:1rem}
+.app{max-width:900px;margin:0 auto}
+.topbar{background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem 1.25rem;margin-bottom:.6rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.topbar h1{font-size:18px;font-weight:600}
+.sync-status{font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid #e0e0e0;background:#f9f9f9;color:#888}
+.sync-status.ok{background:#f0fdf4;color:#16a34a;border-color:#86efac}
+.sync-status.err{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+.sync-status.loading{background:#eff6ff;color:#2563eb;border-color:#93c5fd}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{padding:6px 14px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:13px;cursor:pointer;color:#555;transition:.15s}
+.tab.active{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;font-weight:600}
+.export-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.8rem;padding:.65rem 1.25rem;background:#fff;border:1px solid #e0e0e0;border-radius:12px;align-items:center}
+.export-bar span{font-size:12px;color:#888;margin-right:2px}
+.section{display:none}.section.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1rem}
+.card{background:#f9f9f9;border-radius:8px;padding:.85rem 1rem;border:1px solid #e8e8e8}
+.card .lbl{font-size:12px;color:#888;margin-bottom:4px}
+.card .val{font-size:22px;font-weight:600;color:#222}
+.card .val.g{color:#16a34a}
+.card .val.r{color:#dc2626}
+.card .val.b{color:#2563eb}
+.panel{background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
+.panel h2{font-size:15px;font-weight:600;margin-bottom:12px}
+.form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.form-row input,.form-row select{flex:1;min-width:120px;padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px;background:#fff}
+.btn{padding:7px 14px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;font-weight:600}
+.btn.danger{background:#fee2e2;color:#dc2626;border-color:#fca5a5;font-weight:600}
+.btn.export{background:#f0fdf4;color:#15803d;border-color:#86efac;font-weight:600}
+.btn.import{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f5f5f5;color:#666;padding:8px 10px;text-align:left;border-bottom:1px solid #e8e8e8;font-weight:600}
+td{padding:8px 10px;border-bottom:1px solid #f0f0f0;color:#222}
+tr:hover td{background:#fafafa}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.badge.g{background:#dcfce7;color:#15803d}
+.badge.r{background:#fee2e2;color:#b91c1c}
+.empty{text-align:center;color:#aaa;padding:2rem;font-size:13px}
+.bar-wrap{margin-top:8px}
+.bar-label{font-size:12px;color:#666;display:flex;justify-content:space-between;margin-bottom:4px}
+.bar-bg{background:#f0f0f0;border-radius:4px;height:10px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:.4s}
+.del-btn{background:none;border:none;cursor:pointer;color:#dc2626;font-size:12px;padding:2px 6px}
+.edit-btn{background:none;border:none;cursor:pointer;color:#2563eb;font-size:12px;padding:2px 6px}
+textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px;resize:vertical;font-family:Arial,sans-serif;background:#fff;color:#222}
+.hint{font-size:12px;color:#888;margin-bottom:8px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:999;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:1.5rem;width:92%;max-width:460px}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:1rem}
+.modal label{display:block;font-size:12px;color:#666;margin-bottom:3px;margin-top:10px}
+.modal input,.modal select{width:100%;padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px;background:#fff;color:#222}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:1.2rem}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.7);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:10px;font-size:14px;color:#2563eb}
+.overlay.show{display:flex}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- 로딩 오버레이 -->
+<div class="overlay" id="overlay">
+  <div class="spinner" style="width:28px;height:28px;border-width:3px"></div>
+  <span id="overlay-msg">구글 시트에서 데이터를 불러오는 중...</span>
+</div>
+
+<div class="topbar">
+  <h1>🏦 친목회 재정 관리</h1>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span class="sync-status loading" id="sync-status">연결 중...</span>
+    <button class="btn" onclick="loadAll()" style="font-size:12px;padding:5px 10px">🔄 새로고침</button>
+  </div>
+</div>
+
+<div style="margin-bottom:.6rem">
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('dash',this)">대시보드</button>
+    <button class="tab" onclick="showTab('income',this)">수입</button>
+    <button class="tab" onclick="showTab('expense',this)">지출</button>
+    <button class="tab" onclick="showTab('members',this)">회원</button>
+  </div>
+</div>
+
+<div class="export-bar">
+  <span>📂 이전 데이터 가져오기:</span>
+  <button class="btn import" onclick="document.getElementById('import-legacy').click()">전체 통합 CSV 불러오기</button>
+  <input type="file" id="import-legacy" accept=".csv" style="display:none" onchange="importLegacyCSV(this)">
+  <span style="color:#ccc">|</span>
+  <span>📥 내보내기:</span>
+  <button class="btn export" onclick="exportCurrentCSV()">현재 데이터 CSV 저장</button>
+</div>
+
+<!-- 대시보드 -->
+<div id="tab-dash" class="section active">
+  <div class="cards">
+    <div class="card"><div class="lbl">총 수입</div><div class="val g" id="d-income">&#8361;0</div></div>
+    <div class="card"><div class="lbl">총 지출</div><div class="val r" id="d-expense">&#8361;0</div></div>
+    <div class="card"><div class="lbl">현재 잔액</div><div class="val b" id="d-balance">&#8361;0</div></div>
+    <div class="card"><div class="lbl">총 회원</div><div class="val" id="d-members">0명</div></div>
+  </div>
+  <div class="panel">
+    <h2>수입 / 지출 비율</h2>
+    <div class="bar-wrap">
+      <div class="bar-label"><span>수입</span><span id="bar-income-lbl">&#8361;0</span></div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-income" style="width:0%;background:#16a34a"></div></div>
+    </div>
+    <div class="bar-wrap" style="margin-top:12px">
+      <div class="bar-label"><span>지출</span><span id="bar-expense-lbl">&#8361;0</span></div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-expense" style="width:0%;background:#dc2626"></div></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>최근 거래 내역</h2>
+    <table><thead><tr><th>날짜</th><th>항목</th><th>금액</th><th>구분</th></tr></thead>
+    <tbody id="recent-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- 수입 -->
+<div id="tab-income" class="section">
+  <div class="panel">
+    <h2>수입 등록</h2>
+    <div class="form-row">
+      <input type="date" id="inc-date">
+      <input type="text" id="inc-name" placeholder="항목 (예: 1월 회비)">
+      <input type="number" id="inc-amount" placeholder="금액 (원)">
+      <select id="inc-cat"><option>회비</option><option>기부금</option><option>이자</option><option>기타</option></select>
+    </div>
+    <div class="form-row">
+      <input type="text" id="inc-memo" placeholder="메모 (선택)" style="flex:2">
+      <button class="btn primary" id="inc-add-btn" onclick="addIncome()">+ 추가</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>수입 내역</h2>
+    <table><thead><tr><th>날짜</th><th>항목</th><th>분류</th><th>금액</th><th>메모</th><th></th></tr></thead>
+    <tbody id="income-tbody"></tbody></table>
+    <div id="income-empty" class="empty">등록된 수입 내역이 없습니다</div>
+    <div style="text-align:right;margin-top:10px;font-size:14px;font-weight:600;color:#16a34a">합계: <span id="inc-total">&#8361;0</span></div>
+  </div>
+</div>
+
+<!-- 지출 -->
+<div id="tab-expense" class="section">
+  <div class="panel">
+    <h2>지출 등록</h2>
+    <div class="form-row">
+      <input type="date" id="exp-date">
+      <input type="text" id="exp-name" placeholder="항목 (예: 신년회 식비)">
+      <input type="number" id="exp-amount" placeholder="금액 (원)">
+      <select id="exp-cat"><option>식비/행사</option><option>운영비</option><option>행사비</option><option>경조사</option><option>기타</option></select>
+    </div>
+    <div class="form-row">
+      <input type="text" id="exp-memo" placeholder="메모 (선택)" style="flex:2">
+      <button class="btn danger" id="exp-add-btn" onclick="addExpense()">+ 추가</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>지출 내역</h2>
+    <table><thead><tr><th>날짜</th><th>항목</th><th>분류</th><th>금액</th><th>메모</th><th></th></tr></thead>
+    <tbody id="expense-tbody"></tbody></table>
+    <div id="expense-empty" class="empty">등록된 지출 내역이 없습니다</div>
+    <div style="text-align:right;margin-top:10px;font-size:14px;font-weight:600;color:#dc2626">합계: <span id="exp-total">&#8361;0</span></div>
+  </div>
+</div>
+
+<!-- 회원 -->
+<div id="tab-members" class="section">
+  <div class="panel">
+    <h2>개별 등록</h2>
+    <div class="form-row">
+      <input type="text" id="mem-name" placeholder="이름">
+      <input type="text" id="mem-phone" placeholder="연락처">
+      <input type="date" id="mem-joined">
+      <input type="text" id="mem-role" placeholder="역할 (예: 회장)">
+      <button class="btn primary" id="mem-add-btn" onclick="addMember()">+ 등록</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <h2 style="margin:0">일괄 등록</h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn import" onclick="document.getElementById('mem-excel').click()">📂 엑셀/CSV 업로드</button>
+        <input type="file" id="mem-excel" accept=".xlsx,.xls,.csv" style="display:none" onchange="importMemberFile(this)">
+        <button class="btn export" onclick="downloadMemberTemplate()">📄 양식 다운로드</button>
+      </div>
+    </div>
+    <div class="hint">엑셀에서 <b>이름 / 연락처 / 가입일 / 역할</b> 열을 복사(Ctrl+C) 후 아래에 붙여넣기(Ctrl+V)</div>
+    <textarea id="mem-paste" rows="4" placeholder="홍길동&#9;010-1234-5678&#9;2025-01-01&#9;회장&#10;김철수&#9;010-9876-5432&#9;2025-01-01"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      <button class="btn primary" onclick="importPaste()">붙여넣기 내용 추가</button>
+      <span id="paste-msg" style="font-size:13px;color:#16a34a"></span>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>회원 목록 (<span id="mem-count">0</span>명)</h2>
+    <table><thead><tr><th>No</th><th>이름</th><th>연락처</th><th>가입일</th><th>역할</th><th></th></tr></thead>
+    <tbody id="member-tbody"></tbody></table>
+    <div id="member-empty" class="empty">등록된 회원이 없습니다</div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- 수정 모달 -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <h3 id="modal-title">내역 수정</h3>
+    <label>날짜</label><input type="date" id="modal-date">
+    <label>항목</label><input type="text" id="modal-name" placeholder="항목명">
+    <label>금액 (원)</label><input type="number" id="modal-amount" placeholder="금액">
+    <label>분류</label><select id="modal-cat"></select>
+    <label>메모</label><input type="text" id="modal-memo" placeholder="메모 (선택)">
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn primary" id="modal-save-btn" onclick="saveEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbyFpQccs6RJU9NKnsQH15nbiD95vvzZWZhxQccRauIvp5_9bJp1c3o4dXdpUf83SFZwzA/exec';
+
+var incomes = [], expenses = [], members = [];
+var editType = '', editId = '';
+var incCats = ['회비','기부금','이자','기타'];
+var expCats = ['식비/행사','운영비','행사비','경조사','기타'];
+
+function fmt(n) { return '\u20A9' + Math.round(Number(n)||0).toLocaleString('ko-KR'); }
+function today() { return new Date().toISOString().slice(0,10); }
+
+/* ── API 호출 (JSONP - CORS 우회) ── */
+var _cbIdx = 0;
+function api(params, cb) {
+  var cbName = '_apicb' + (++_cbIdx);
+  var timer = setTimeout(function() { delete window[cbName]; cb(new Error('timeout')); }, 15000);
+  window[cbName] = function(d) {
+    clearTimeout(timer); delete window[cbName];
+    var s = document.getElementById('_s_' + cbName);
+    if (s && s.parentNode) s.parentNode.removeChild(s);
+    cb(null, d);
+  };
+  params['callback'] = cbName;
+  var qs = Object.keys(params).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]); }).join('&');
+  var s = document.createElement('script');
+  s.id = '_s_' + cbName; s.src = API + '?' + qs;
+  s.onerror = function(){ clearTimeout(timer); delete window[cbName]; if(s.parentNode)s.parentNode.removeChild(s); cb(new Error('error')); };
+  document.head.appendChild(s);
+}
+
+/* ── 동기화 상태 ── */
+function setStatus(state, msg) {
+  var el = document.getElementById('sync-status');
+  el.className = 'sync-status ' + state;
+  el.textContent = msg;
+}
+
+/* ── 오버레이 ── */
+function showOverlay(msg) {
+  document.getElementById('overlay-msg').textContent = msg || '처리 중...';
+  document.getElementById('overlay').classList.add('show');
+}
+function hideOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+}
+
+/* ── 전체 데이터 불러오기 ── */
+function loadAll() {
+  setStatus('loading', '동기화 중...');
+  showOverlay('구글 시트에서 데이터를 불러오는 중...');
+  api({ action: 'init' }, function(err) {
+    api({ action: 'getAll' }, function(err, data) {
+      hideOverlay();
+      if (err || data.error) {
+        setStatus('err', '연결 실패');
+        alert('구글 시트 연결에 실패했습니다.\n인터넷 연결을 확인해 주세요.');
+        return;
+      }
+      incomes  = (data['수입내역']  || []).map(normalize);
+      expenses = (data['지출내역'] || []).map(normalize);
+      members  = (data['회원목록'] || []).map(normalize);
+      incomes.sort(function(a,b){return String(b['날짜']).localeCompare(String(a['날짜']));});
+      expenses.sort(function(a,b){return String(b['날짜']).localeCompare(String(a['날짜']));});
+      renderIncome(); renderExpense(); renderMembers(); renderDash();
+      setStatus('ok', '✓ 구글 시트 연동됨');
+    });
+  });
+}
+
+function normalize(r) {
+  // Apps Script에서 오는 날짜 객체 → 문자열 변환
+  if (r['날짜'] && typeof r['날짜'] === 'object') {
+    r['날짜'] = r['날짜'].toString().slice(0,10);
+  }
+  if (r['가입일'] && typeof r['가입일'] === 'object') {
+    r['가입일'] = r['가입일'].toString().slice(0,10);
+  }
+  return r;
+}
+
+/* ── 탭 전환 ── */
+function showTab(t, btn) {
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('tab-' + t).classList.add('active');
+  btn.classList.add('active');
+  if (t === 'dash') renderDash();
+}
+
+/* ── 수입 추가 ── */
+function addIncome() {
+  var d = document.getElementById('inc-date').value || today();
+  var n = document.getElementById('inc-name').value.trim();
+  var a = parseFloat(document.getElementById('inc-amount').value) || 0;
+  var c = document.getElementById('inc-cat').value;
+  var m = document.getElementById('inc-memo').value.trim();
+  if (!n || !a) { alert('항목과 금액을 입력해 주세요'); return; }
+  setBtnLoading('inc-add-btn', true);
+  api({ action: 'add', sheet: '수입내역', data: JSON.stringify({'날짜':d,'항목':n,'금액':a,'분류':c,'메모':m}) }, function(err, res) {
+    setBtnLoading('inc-add-btn', false);
+    if (err || !res || res.error) { alert('저장 실패. 다시 시도해 주세요.'); return; }
+    document.getElementById('inc-name').value = '';
+    document.getElementById('inc-amount').value = '';
+    document.getElementById('inc-memo').value = '';
+    loadAll();
+  });
+}
+
+/* ── 지출 추가 ── */
+function addExpense() {
+  var d = document.getElementById('exp-date').value || today();
+  var n = document.getElementById('exp-name').value.trim();
+  var a = parseFloat(document.getElementById('exp-amount').value) || 0;
+  var c = document.getElementById('exp-cat').value;
+  var m = document.getElementById('exp-memo').value.trim();
+  if (!n || !a) { alert('항목과 금액을 입력해 주세요'); return; }
+  setBtnLoading('exp-add-btn', true);
+  api({ action: 'add', sheet: '지출내역', data: JSON.stringify({'날짜':d,'항목':n,'금액':a,'분류':c,'메모':m}) }, function(err, res) {
+    setBtnLoading('exp-add-btn', false);
+    if (err || !res || res.error) { alert('저장 실패. 다시 시도해 주세요.'); return; }
+    document.getElementById('exp-name').value = '';
+    document.getElementById('exp-amount').value = '';
+    document.getElementById('exp-memo').value = '';
+    loadAll();
+  });
+}
+
+/* ── 회원 추가 ── */
+function addMember() {
+  var n = document.getElementById('mem-name').value.trim();
+  var p = document.getElementById('mem-phone').value.trim();
+  var j = document.getElementById('mem-joined').value || today();
+  var r = document.getElementById('mem-role').value.trim();
+  if (!n) { alert('이름을 입력해 주세요'); return; }
+  setBtnLoading('mem-add-btn', true);
+  api({ action: 'add', sheet: '회원목록', data: JSON.stringify({'이름':n,'연락처':p,'가입일':j,'역할':r}) }, function(err, res) {
+    setBtnLoading('mem-add-btn', false);
+    if (err || !res || res.error) { alert('저장 실패. 다시 시도해 주세요.'); return; }
+    document.getElementById('mem-name').value = '';
+    document.getElementById('mem-phone').value = '';
+    document.getElementById('mem-role').value = '';
+    loadAll();
+  });
+}
+
+/* ── 삭제 ── */
+function delIncome(id) {
+  if (!confirm('이 수입 내역을 삭제할까요?')) return;
+  showOverlay('삭제 중...');
+  api({ action: 'delete', sheet: '수입내역', id: id }, function() { loadAll(); });
+}
+function delExpense(id) {
+  if (!confirm('이 지출 내역을 삭제할까요?')) return;
+  showOverlay('삭제 중...');
+  api({ action: 'delete', sheet: '지출내역', id: id }, function() { loadAll(); });
+}
+function delMember(id) {
+  if (!confirm('이 회원을 삭제할까요?')) return;
+  showOverlay('삭제 중...');
+  api({ action: 'delete', sheet: '회원목록', id: id }, function() { loadAll(); });
+}
+
+/* ── 수정 모달 ── */
+function openEdit(type, id) {
+  var arr = type === 'income' ? incomes : expenses;
+  var rec = arr.find(function(x) { return String(x['id']) === String(id); });
+  if (!rec) return;
+  editType = type; editId = id;
+  document.getElementById('modal-title').textContent = type === 'income' ? '수입 내역 수정' : '지출 내역 수정';
+  document.getElementById('modal-date').value = rec['날짜'] || today();
+  document.getElementById('modal-name').value = rec['항목'] || '';
+  document.getElementById('modal-amount').value = rec['금액'] || '';
+  document.getElementById('modal-memo').value = rec['메모'] || '';
+  var cats = type === 'income' ? incCats : expCats;
+  var cur = rec['분류'] || cats[0];
+  document.getElementById('modal-cat').innerHTML = cats.map(function(c) {
+    return '<option' + (c === cur ? ' selected' : '') + '>' + c + '</option>';
+  }).join('');
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+function saveEdit() {
+  var d = document.getElementById('modal-date').value || today();
+  var n = document.getElementById('modal-name').value.trim();
+  var a = parseFloat(document.getElementById('modal-amount').value) || 0;
+  var c = document.getElementById('modal-cat').value;
+  var m = document.getElementById('modal-memo').value.trim();
+  if (!n || !a) { alert('항목과 금액을 입력해 주세요'); return; }
+  var sheet = editType === 'income' ? '수입내역' : '지출내역';
+  setBtnLoading('modal-save-btn', true);
+  api({ action: 'update', sheet: sheet, id: editId, data: JSON.stringify({'날짜':d,'항목':n,'금액':a,'분류':c,'메모':m}) }, function(err, res) {
+    setBtnLoading('modal-save-btn', false);
+    if (err || !res || res.error) { alert('수정 실패. 다시 시도해 주세요.'); return; }
+    closeModal();
+    loadAll();
+  });
+}
+document.getElementById('edit-modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+/* ── 렌더링 ── */
+function renderIncome() {
+  var tb = document.getElementById('income-tbody');
+  var em = document.getElementById('income-empty');
+  if (!incomes.length) { tb.innerHTML = ''; em.style.display = 'block'; document.getElementById('inc-total').textContent = '\u20A90'; return; }
+  em.style.display = 'none';
+  var tot = 0;
+  tb.innerHTML = incomes.map(function(r) {
+    tot += Number(r['금액']) || 0;
+    return '<tr><td>' + r['날짜'] + '</td><td>' + r['항목'] + '</td><td><span class="badge g">' + (r['분류']||'') + '</span></td><td>' + fmt(r['금액']) + '</td><td style="color:#888">' + (r['메모']||'') + '</td><td style="white-space:nowrap"><button class="edit-btn" onclick="openEdit(\'income\',\'' + r['id'] + '\')">수정</button><button class="del-btn" onclick="delIncome(\'' + r['id'] + '\')">삭제</button></td></tr>';
+  }).join('');
+  document.getElementById('inc-total').textContent = fmt(tot);
+}
+function renderExpense() {
+  var tb = document.getElementById('expense-tbody');
+  var em = document.getElementById('expense-empty');
+  if (!expenses.length) { tb.innerHTML = ''; em.style.display = 'block'; document.getElementById('exp-total').textContent = '\u20A90'; return; }
+  em.style.display = 'none';
+  var tot = 0;
+  tb.innerHTML = expenses.map(function(r) {
+    tot += Number(r['금액']) || 0;
+    return '<tr><td>' + r['날짜'] + '</td><td>' + r['항목'] + '</td><td><span class="badge r">' + (r['분류']||'') + '</span></td><td>' + fmt(r['금액']) + '</td><td style="color:#888">' + (r['메모']||'') + '</td><td style="white-space:nowrap"><button class="edit-btn" onclick="openEdit(\'expense\',\'' + r['id'] + '\')">수정</button><button class="del-btn" onclick="delExpense(\'' + r['id'] + '\')">삭제</button></td></tr>';
+  }).join('');
+  document.getElementById('exp-total').textContent = fmt(tot);
+}
+function renderMembers() {
+  var tb = document.getElementById('member-tbody');
+  var em = document.getElementById('member-empty');
+  document.getElementById('mem-count').textContent = members.length;
+  if (!members.length) { tb.innerHTML = ''; em.style.display = 'block'; return; }
+  em.style.display = 'none';
+  tb.innerHTML = members.map(function(r, i) {
+    return '<tr><td>' + (i+1) + '</td><td>' + r['이름'] + '</td><td style="color:#888">' + (r['연락처']||'') + '</td><td>' + (r['가입일']||'') + '</td><td>' + (r['역할']||'') + '</td><td><button class="del-btn" onclick="delMember(\'' + r['id'] + '\')">삭제</button></td></tr>';
+  }).join('');
+  updateDash();
+}
+function updateDash() {
+  var inc = incomes.reduce(function(s,x){return s+(Number(x['금액'])||0);},0);
+  var exp = expenses.reduce(function(s,x){return s+(Number(x['금액'])||0);},0);
+  document.getElementById('d-income').textContent = fmt(inc);
+  document.getElementById('d-expense').textContent = fmt(exp);
+  document.getElementById('d-balance').textContent = fmt(inc-exp);
+  document.getElementById('d-members').textContent = members.length + '명';
+  var tot = inc + exp;
+  document.getElementById('bar-income').style.width = (tot ? Math.round(inc/tot*100) : 0) + '%';
+  document.getElementById('bar-expense').style.width = (tot ? Math.round(exp/tot*100) : 0) + '%';
+  document.getElementById('bar-income-lbl').textContent = fmt(inc);
+  document.getElementById('bar-expense-lbl').textContent = fmt(exp);
+}
+function renderDash() {
+  var recent = [];
+  incomes.slice(0,5).forEach(function(r){recent.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'income'});});
+  expenses.slice(0,5).forEach(function(r){recent.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'expense'});});
+  recent.sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+  recent = recent.slice(0,8);
+  var tb = document.getElementById('recent-tbody');
+  if (!recent.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">거래 내역을 수입/지출 탭에서 추가해보세요</td></tr>'; updateDash(); return; }
+  tb.innerHTML = recent.map(function(r) {
+    var badge = r.type === 'income' ? '<span class="badge g">수입</span>' : '<span class="badge r">지출</span>';
+    var color = r.type === 'income' ? '#16a34a' : '#dc2626';
+    return '<tr><td>' + r.date + '</td><td>' + r.name + '</td><td style="color:' + color + ';font-weight:600">' + (r.type==='income'?'+':'-') + fmt(r.amount) + '</td><td>' + badge + '</td></tr>';
+  }).join('');
+  updateDash();
+}
+
+/* ── 회원 일괄 등록 ── */
+function importPaste() {
+  var raw = document.getElementById('mem-paste').value.trim();
+  if (!raw) { alert('붙여넣기 내용이 없습니다'); return; }
+  var rows = raw.split('\n').map(function(l) { return l.split('\t'); });
+  bulkAddMembers(rows);
+}
+function importMemberFile(input) {
+  var file = input.files[0]; if (!file) return;
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var lines = e.target.result.replace(/^\uFEFF/,'').split('\n').filter(Boolean);
+      var rows = skipHeader(lines.map(parseCSVLine));
+      bulkAddMembers(rows); };
+    reader.readAsText(file,'UTF-8');
+  } else {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var wb = XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        var json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+        bulkAddMembers(skipHeader(json.map(function(r){return r.map(function(c){return String(c==null?'':c);});})));
+      } catch(e) { alert('파일 읽기 오류'); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  input.value = '';
+}
+function skipHeader(rows) {
+  return rows.filter(function(r){ var f=String(r[0]||'').trim(); return f&&!/^(이름|no|번호|name)$/i.test(f); });
+}
+function bulkAddMembers(rows) {
+  var valid = [];
+  rows.forEach(function(cols) {
+    if (/^\d+$/.test(String(cols[0]||'').trim())) cols = cols.slice(1);
+    var name = String(cols[0]||'').trim(); if (!name) return;
+    var phone = String(cols[1]||'').trim();
+    var joined = String(cols[2]||'').trim().replace(/\./g,'-').replace(/\//g,'-');
+    if (/^\d{8}$/.test(joined)) joined = joined.slice(0,4)+'-'+joined.slice(4,6)+'-'+joined.slice(6,8);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(joined)) joined = today();
+    var role = String(cols[3]||'').trim();
+    valid.push({'이름':name,'연락처':phone,'가입일':joined,'역할':role});
+  });
+  if (!valid.length) { alert('추가할 회원이 없습니다'); return; }
+  showOverlay(valid.length + '명 등록 중...');
+  var done = 0;
+  valid.forEach(function(data) {
+    api({ action:'add', sheet:'회원목록', data: JSON.stringify(data) }, function() {
+      done++;
+      if (done === valid.length) {
+        document.getElementById('mem-paste').value = '';
+        var msg = document.getElementById('paste-msg');
+        msg.textContent = valid.length + '명 추가 완료!';
+        setTimeout(function(){msg.textContent='';}, 3000);
+        loadAll();
+      }
+    });
+  });
+}
+function downloadMemberTemplate() {
+  var rows = [['이름','연락처','가입일','역할'],['홍길동','010-1234-5678','2025-01-01','회장']];
+  downloadCSV('회원등록_양식.csv', rows.map(function(r){return r.join(',');}).join('\n'));
+}
+
+/* ── CSV 유틸 ── */
+function parseCSVLine(line) {
+  var result=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){result.push(cur);cur='';}else cur+=c;}
+  result.push(cur); return result;
+}
+function toCSV(rows) {
+  return rows.map(function(r){
+    return r.map(function(c){
+      var s=String(c==null?'':c);
+      if(s.indexOf(',')>-1||s.indexOf('"')>-1||s.indexOf('\n')>-1) s='"'+s.replace(/"/g,'""')+'"';
+      return s;
+    }).join(',');
+  }).join('\n');
+}
+function downloadCSV(filename, content) {
+  var blob = new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+}
+
+/* ── 이전 CSV 불러와서 구글 시트에 업로드 ── */
+function importLegacyCSV(input) {
+  var file = input.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result.replace(/^\uFEFF/,'');
+    var lines = text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+    var newInc=[], newExp=[], newMem=[], section='';
+    for (var i=0; i<lines.length; i++) {
+      var cols = parseCSVLine(lines[i]);
+      var first = cols[0]||'';
+      if (first==='[수입 내역]'){section='income';continue;}
+      if (first==='[지출 내역]'){section='expense';continue;}
+      if (first==='[회원 목록]'){section='members';continue;}
+      if (/^\[/.test(first)){section='other';continue;}
+      if (['날짜','No','','합계','총 수입','총 지출','현재 잔액','총 회원'].indexOf(first)>-1) continue;
+      if (section==='income' && cols.length>=3) {
+        var a=parseFloat(String(cols[2]||'').replace(/,/g,''))||0;
+        if (a>0) newInc.push({'날짜':cols[0],'항목':cols[1],'금액':a,'분류':cols[3]||'기타','메모':cols[4]||''});
+      } else if (section==='expense' && cols.length>=3) {
+        var a=parseFloat(String(cols[2]||'').replace(/,/g,''))||0;
+        if (a>0) newExp.push({'날짜':cols[0],'항목':cols[1],'금액':a,'분류':cols[3]||'기타','메모':cols[4]||''});
+      } else if (section==='members' && cols[1]) {
+        newMem.push({'이름':cols[1],'연락처':cols[2]||'','가입일':cols[3]||today(),'역할':cols[4]||''});
+      }
+    }
+    var total = newInc.length + newExp.length + newMem.length;
+    if (!total) { alert('불러올 데이터가 없습니다.\n전체 통합 CSV 파일인지 확인해 주세요.'); input.value=''; return; }
+    if (!confirm('구글 시트에 추가할까요?\n수입 '+newInc.length+'건 / 지출 '+newExp.length+'건 / 회원 '+newMem.length+'명\n\n※ 기존 데이터에 추가됩니다.')) { input.value=''; return; }
+    showOverlay('구글 시트에 업로드 중... (0/' + total + ')');
+    var done = 0;
+    function next(arr, sheet) {
+      arr.forEach(function(data) {
+        api({ action:'add', sheet:sheet, data:JSON.stringify(data) }, function() {
+          done++;
+          document.getElementById('overlay-msg').textContent = '구글 시트에 업로드 중... (' + done + '/' + total + ')';
+          if (done === total) { loadAll(); alert('업로드 완료! 수입 '+newInc.length+'건 / 지출 '+newExp.length+'건 / 회원 '+newMem.length+'명'); }
+        });
+      });
+    }
+    next(newInc, '수입내역');
+    next(newExp, '지출내역');
+    next(newMem, '회원목록');
+    input.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+/* ── 현재 데이터 CSV로 내보내기 ── */
+function exportCurrentCSV() {
+  if (!incomes.length && !expenses.length && !members.length) { alert('저장된 데이터가 없습니다'); return; }
+  var inc = incomes.reduce(function(s,x){return s+(Number(x['금액'])||0);},0);
+  var exp = expenses.reduce(function(s,x){return s+(Number(x['금액'])||0);},0);
+  var rows = [];
+  rows.push(['[요약]']); rows.push(['총 수입',inc,'원']); rows.push(['총 지출',exp,'원']);
+  rows.push(['현재 잔액',inc-exp,'원']); rows.push(['총 회원',members.length,'명']); rows.push([]);
+  rows.push(['[수입 내역]']); rows.push(['날짜','항목','금액(원)','분류','메모']);
+  incomes.forEach(function(r){rows.push([r['날짜'],r['항목'],r['금액'],r['분류']||'',r['메모']||'']);});
+  rows.push(['','합계',inc,'','']); rows.push([]);
+  rows.push(['[지출 내역]']); rows.push(['날짜','항목','금액(원)','분류','메모']);
+  expenses.forEach(function(r){rows.push([r['날짜'],r['항목'],r['금액'],r['분류']||'',r['메모']||'']);});
+  rows.push(['','합계',exp,'','']); rows.push([]);
+  rows.push(['[회원 목록]']); rows.push(['No','이름','연락처','가입일','역할']);
+  members.forEach(function(r,i){rows.push([i+1,r['이름'],r['연락처']||'',r['가입일']||'',r['역할']||'']);});
+  downloadCSV('친목회_재정관리_전체_'+today()+'.csv', toCSV(rows));
+}
+
+/* ── 버튼 로딩 상태 ── */
+function setBtnLoading(id, loading) {
+  var btn = document.getElementById(id);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) btn.innerHTML = '<span class="spinner"></span>저장 중...';
+  else {
+    if (id==='inc-add-btn') btn.innerHTML = '+ 추가';
+    else if (id==='exp-add-btn') btn.innerHTML = '+ 추가';
+    else if (id==='mem-add-btn') btn.innerHTML = '+ 등록';
+    else if (id==='modal-save-btn') btn.innerHTML = '저장';
+  }
+}
+
+/* ── 초기화 ── */
+document.getElementById('inc-date').value = today();
+document.getElementById('exp-date').value = today();
+document.getElementById('mem-joined').value = today();
+loadAll();
+</script>
+</body>
+</html>
