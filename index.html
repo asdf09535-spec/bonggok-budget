@@ -64,10 +64,68 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 @keyframes spin{to{transform:rotate(360deg)}}
 .overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.7);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:10px;font-size:14px;color:#2563eb}
 .overlay.show{display:flex}
+
+/* ── 비밀번호 화면 ── */
+#pw-screen{display:flex;position:fixed;inset:0;background:#f5f5f5;z-index:9999;align-items:center;justify-content:center}
+.pw-box{background:#fff;border-radius:16px;border:1px solid #e0e0e0;padding:2.5rem 2rem;width:92%;max-width:360px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
+.pw-box .pw-icon{font-size:40px;margin-bottom:1rem}
+.pw-box h2{font-size:16px;font-weight:600;margin-bottom:6px;color:#222}
+.pw-box p{font-size:13px;color:#888;margin-bottom:1.5rem}
+.pw-box input{width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #ddd;font-size:18px;text-align:center;letter-spacing:6px;color:#222;background:#fafafa;margin-bottom:10px;outline:none;transition:.2s}
+.pw-box input:focus{border-color:#93c5fd;background:#fff}
+.pw-box input.err{border-color:#fca5a5;background:#fff5f5;animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pw-box .pw-err{color:#dc2626;font-size:12px;height:16px;margin-bottom:8px}
+.pw-box .pw-btn{width:100%;padding:10px;border-radius:10px;border:none;background:#dbeafe;color:#1d4ed8;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+.pw-box .pw-btn:hover{background:#bfdbfe}
+
+/* ── 탭 비밀번호 모달 ── */
+#tab-pw-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:center;justify-content:center}
+#tab-pw-modal.open{display:flex}
+.tab-pw-box{background:#fff;border-radius:14px;padding:1.8rem 1.5rem;width:92%;max-width:320px;text-align:center}
+.tab-pw-box .pw-icon{font-size:32px;margin-bottom:.8rem}
+.tab-pw-box h3{font-size:14px;font-weight:600;margin-bottom:4px;color:#222}
+.tab-pw-box p{font-size:12px;color:#888;margin-bottom:1.2rem}
+.tab-pw-box input{width:100%;padding:9px 12px;border-radius:9px;border:1.5px solid #ddd;font-size:17px;text-align:center;letter-spacing:5px;color:#222;background:#fafafa;margin-bottom:8px;outline:none;transition:.2s}
+.tab-pw-box input:focus{border-color:#93c5fd;background:#fff}
+.tab-pw-box input.err{border-color:#fca5a5;animation:shake .3s}
+.tab-pw-box .pw-err{color:#dc2626;font-size:12px;height:14px;margin-bottom:6px}
+.tab-pw-box .tab-pw-btns{display:flex;gap:8px}
+.tab-pw-box .tab-pw-btns button{flex:1;padding:9px;border-radius:9px;border:1px solid #ddd;font-size:13px;font-weight:600;cursor:pointer}
+.tab-pw-box .tab-pw-btns .confirm{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
+.tab-pw-box .tab-pw-btns .cancel{background:#f5f5f5;color:#666}
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- ── 페이지 진입 비밀번호 화면 ── -->
+<div id="pw-screen">
+  <div class="pw-box">
+    <div class="pw-icon">🔒</div>
+    <h2>친목회 재정 관리</h2>
+    <p>접근하려면 비밀번호를 입력해 주세요</p>
+    <input type="password" id="pw-input" maxlength="10" placeholder="••••" onkeydown="if(event.key==='Enter')checkPW()">
+    <div class="pw-err" id="pw-err"></div>
+    <button class="pw-btn" onclick="checkPW()">확인</button>
+  </div>
+</div>
+
+<!-- ── 탭 비밀번호 모달 ── -->
+<div id="tab-pw-modal">
+  <div class="tab-pw-box">
+    <div class="pw-icon">🔐</div>
+    <h3 id="tab-pw-title">탭 전환</h3>
+    <p>비밀번호를 입력해 주세요</p>
+    <input type="password" id="tab-pw-input" maxlength="10" placeholder="••••" onkeydown="if(event.key==='Enter')confirmTabPW()">
+    <div class="pw-err" id="tab-pw-err"></div>
+    <div class="tab-pw-btns">
+      <button class="cancel" onclick="cancelTabPW()">취소</button>
+      <button class="confirm" onclick="confirmTabPW()">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none">
 
 <!-- 로딩 오버레이 -->
 <div class="overlay" id="overlay">
@@ -85,10 +143,10 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 
 <div style="margin-bottom:.6rem">
   <div class="tabs">
-    <button class="tab active" onclick="showTab('dash',this)">대시보드</button>
-    <button class="tab" onclick="showTab('income',this)">수입</button>
-    <button class="tab" onclick="showTab('expense',this)">지출</button>
-    <button class="tab" onclick="showTab('members',this)">회원</button>
+    <button class="tab active" id="tab-btn-dash" onclick="requestTab('dash',this)">대시보드</button>
+    <button class="tab" id="tab-btn-income" onclick="requestTab('income',this)">수입</button>
+    <button class="tab" id="tab-btn-expense" onclick="requestTab('expense',this)">지출</button>
+    <button class="tab" id="tab-btn-members" onclick="requestTab('members',this)">회원</button>
   </div>
 </div>
 
@@ -231,6 +289,93 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
+/* ══════════════════════════════════════════════
+   비밀번호 설정
+══════════════════════════════════════════════ */
+var PW = '7752';
+
+/* ── 페이지 진입 비밀번호 ── */
+function checkPW() {
+  var val = document.getElementById('pw-input').value;
+  var inp = document.getElementById('pw-input');
+  var err = document.getElementById('pw-err');
+  if (val === PW) {
+    document.getElementById('pw-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    // 항상 대시보드로 시작
+    document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+    document.querySelectorAll('.tab').forEach(function(b){ b.classList.remove('active'); });
+    document.getElementById('tab-dash').classList.add('active');
+    document.getElementById('tab-btn-dash').classList.add('active');
+    loadAll();
+  } else {
+    err.textContent = '비밀번호가 틀렸습니다';
+    inp.classList.add('err');
+    inp.value = '';
+    setTimeout(function(){ inp.classList.remove('err'); err.textContent=''; }, 1500);
+    inp.focus();
+  }
+}
+document.getElementById('pw-input').focus();
+document.getElementById('pw-input').addEventListener('keydown', function(e){
+  if(e.key==='Enter') checkPW();
+});
+
+/* ── 탭 비밀번호 ── */
+var _pendingTab = null;
+var _pendingBtn = null;
+// 대시보드는 비밀번호 없이 접근 가능, 수입/지출/회원만 요구
+var PROTECTED_TABS = ['income','expense','members'];
+
+function requestTab(t, btn) {
+  if (PROTECTED_TABS.indexOf(t) === -1) {
+    // 대시보드: 바로 이동
+    showTab(t, btn);
+    return;
+  }
+  // 이미 활성화된 탭이면 비밀번호 불필요
+  if (btn.classList.contains('active')) return;
+
+  _pendingTab = t;
+  _pendingBtn = btn;
+  var labels = {income:'수입', expense:'지출', members:'회원'};
+  document.getElementById('tab-pw-title').textContent = '[' + (labels[t]||t) + '] 탭 열기';
+  document.getElementById('tab-pw-input').value = '';
+  document.getElementById('tab-pw-err').textContent = '';
+  document.getElementById('tab-pw-modal').classList.add('open');
+  setTimeout(function(){ document.getElementById('tab-pw-input').focus(); }, 80);
+}
+
+function confirmTabPW() {
+  var val = document.getElementById('tab-pw-input').value;
+  var inp = document.getElementById('tab-pw-input');
+  var err = document.getElementById('tab-pw-err');
+  if (val === PW) {
+    document.getElementById('tab-pw-modal').classList.remove('open');
+    showTab(_pendingTab, _pendingBtn);
+    _pendingTab = null; _pendingBtn = null;
+  } else {
+    err.textContent = '비밀번호가 틀렸습니다';
+    inp.classList.add('err');
+    inp.value = '';
+    setTimeout(function(){ inp.classList.remove('err'); err.textContent=''; }, 1500);
+    inp.focus();
+  }
+}
+
+function cancelTabPW() {
+  document.getElementById('tab-pw-modal').classList.remove('open');
+  _pendingTab = null; _pendingBtn = null;
+}
+
+document.getElementById('tab-pw-input').addEventListener('keydown', function(e){
+  if(e.key==='Enter') confirmTabPW();
+  if(e.key==='Escape') cancelTabPW();
+});
+
+/* ══════════════════════════════════════════════
+   기존 앱 로직
+══════════════════════════════════════════════ */
 var API = 'https://script.google.com/macros/s/AKfycbyFpQccs6RJU9NKnsQH15nbiD95vvzZWZhxQccRauIvp5_9bJp1c3o4dXdpUf83SFZwzA/exec';
 
 var incomes = [], expenses = [], members = [];
@@ -241,7 +386,7 @@ var expCats = ['식비/행사','운영비','행사비','경조사','기타'];
 function fmt(n) { return '\u20A9' + Math.round(Number(n)||0).toLocaleString('ko-KR'); }
 function today() { return new Date().toISOString().slice(0,10); }
 
-/* ── API 호출 (JSONP - CORS 우회) ── */
+/* ── API 호출 (JSONP) ── */
 var _cbIdx = 0;
 function api(params, cb) {
   var cbName = '_apicb' + (++_cbIdx);
@@ -260,14 +405,11 @@ function api(params, cb) {
   document.head.appendChild(s);
 }
 
-/* ── 동기화 상태 ── */
 function setStatus(state, msg) {
   var el = document.getElementById('sync-status');
   el.className = 'sync-status ' + state;
   el.textContent = msg;
 }
-
-/* ── 오버레이 ── */
 function showOverlay(msg) {
   document.getElementById('overlay-msg').textContent = msg || '처리 중...';
   document.getElementById('overlay').classList.add('show');
@@ -276,7 +418,6 @@ function hideOverlay() {
   document.getElementById('overlay').classList.remove('show');
 }
 
-/* ── 전체 데이터 불러오기 ── */
 function loadAll() {
   setStatus('loading', '동기화 중...');
   showOverlay('구글 시트에서 데이터를 불러오는 중...');
@@ -300,17 +441,12 @@ function loadAll() {
 }
 
 function normalize(r) {
-  // Apps Script에서 오는 날짜 객체 → 문자열 변환
-  if (r['날짜'] && typeof r['날짜'] === 'object') {
-    r['날짜'] = r['날짜'].toString().slice(0,10);
-  }
-  if (r['가입일'] && typeof r['가입일'] === 'object') {
-    r['가입일'] = r['가입일'].toString().slice(0,10);
-  }
+  if (r['날짜'] && typeof r['날짜'] === 'object') r['날짜'] = r['날짜'].toString().slice(0,10);
+  if (r['가입일'] && typeof r['가입일'] === 'object') r['가입일'] = r['가입일'].toString().slice(0,10);
   return r;
 }
 
-/* ── 탭 전환 ── */
+/* ── 탭 전환 (내부용 - 비밀번호 검증 후 호출) ── */
 function showTab(t, btn) {
   document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
   document.querySelectorAll('.tab').forEach(function(b) { b.classList.remove('active'); });
@@ -478,15 +614,21 @@ function updateDash() {
   document.getElementById('bar-income-lbl').textContent = fmt(inc);
   document.getElementById('bar-expense-lbl').textContent = fmt(exp);
 }
+
+/* ── 대시보드 최근 거래내역: 제한 없이 전체 표시 ── */
 function renderDash() {
-  var recent = [];
-  incomes.slice(0,5).forEach(function(r){recent.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'income'});});
-  expenses.slice(0,5).forEach(function(r){recent.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'expense'});});
-  recent.sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
-  recent = recent.slice(0,8);
+  var all = [];
+  incomes.forEach(function(r){ all.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'income'}); });
+  expenses.forEach(function(r){ all.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'expense'}); });
+  all.sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
+  // 개수 제한 없이 전체 표시
   var tb = document.getElementById('recent-tbody');
-  if (!recent.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">거래 내역을 수입/지출 탭에서 추가해보세요</td></tr>'; updateDash(); return; }
-  tb.innerHTML = recent.map(function(r) {
+  if (!all.length) {
+    tb.innerHTML = '<tr><td colspan="4" class="empty">거래 내역을 수입/지출 탭에서 추가해보세요</td></tr>';
+    updateDash();
+    return;
+  }
+  tb.innerHTML = all.map(function(r) {
     var badge = r.type === 'income' ? '<span class="badge g">수입</span>' : '<span class="badge r">지출</span>';
     var color = r.type === 'income' ? '#16a34a' : '#dc2626';
     return '<tr><td>' + r.date + '</td><td>' + r.name + '</td><td style="color:' + color + ';font-weight:600">' + (r.type==='income'?'+':'-') + fmt(r.amount) + '</td><td>' + badge + '</td></tr>';
@@ -580,7 +722,7 @@ function downloadCSV(filename, content) {
   var a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
 }
 
-/* ── 이전 CSV 불러와서 구글 시트에 업로드 ── */
+/* ── 이전 CSV 불러오기 ── */
 function importLegacyCSV(input) {
   var file = input.files[0]; if (!file) return;
   var reader = new FileReader();
@@ -628,7 +770,7 @@ function importLegacyCSV(input) {
   reader.readAsText(file, 'UTF-8');
 }
 
-/* ── 현재 데이터 CSV로 내보내기 ── */
+/* ── 현재 데이터 CSV 내보내기 ── */
 function exportCurrentCSV() {
   if (!incomes.length && !expenses.length && !members.length) { alert('저장된 데이터가 없습니다'); return; }
   var inc = incomes.reduce(function(s,x){return s+(Number(x['금액'])||0);},0);
@@ -647,7 +789,7 @@ function exportCurrentCSV() {
   downloadCSV('친목회_재정관리_전체_'+today()+'.csv', toCSV(rows));
 }
 
-/* ── 버튼 로딩 상태 ── */
+/* ── 버튼 로딩 ── */
 function setBtnLoading(id, loading) {
   var btn = document.getElementById(id);
   if (!btn) return;
@@ -661,11 +803,10 @@ function setBtnLoading(id, loading) {
   }
 }
 
-/* ── 초기화 ── */
+/* ── 초기화 (비밀번호 통과 후 loadAll에서 호출됨) ── */
 document.getElementById('inc-date').value = today();
 document.getElementById('exp-date').value = today();
 document.getElementById('mem-joined').value = today();
-loadAll();
 </script>
 </body>
 </html>
