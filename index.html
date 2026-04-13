@@ -65,20 +65,6 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 .overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.7);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:10px;font-size:14px;color:#2563eb}
 .overlay.show{display:flex}
 
-/* ── 비밀번호 화면 ── */
-#pw-screen{display:flex;position:fixed;inset:0;background:#f5f5f5;z-index:9999;align-items:center;justify-content:center}
-.pw-box{background:#fff;border-radius:16px;border:1px solid #e0e0e0;padding:2.5rem 2rem;width:92%;max-width:360px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
-.pw-box .pw-icon{font-size:40px;margin-bottom:1rem}
-.pw-box h2{font-size:16px;font-weight:600;margin-bottom:6px;color:#222}
-.pw-box p{font-size:13px;color:#888;margin-bottom:1.5rem}
-.pw-box input{width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #ddd;font-size:18px;text-align:center;letter-spacing:6px;color:#222;background:#fafafa;margin-bottom:10px;outline:none;transition:.2s}
-.pw-box input:focus{border-color:#93c5fd;background:#fff}
-.pw-box input.err{border-color:#fca5a5;background:#fff5f5;animation:shake .3s}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
-.pw-box .pw-err{color:#dc2626;font-size:12px;height:16px;margin-bottom:8px}
-.pw-box .pw-btn{width:100%;padding:10px;border-radius:10px;border:none;background:#dbeafe;color:#1d4ed8;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
-.pw-box .pw-btn:hover{background:#bfdbfe}
-
 /* ── 탭 비밀번호 모달 ── */
 #tab-pw-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:center;justify-content:center}
 #tab-pw-modal.open{display:flex}
@@ -98,18 +84,6 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 </head>
 <body>
 
-<!-- ── 페이지 진입 비밀번호 화면 ── -->
-<div id="pw-screen">
-  <div class="pw-box">
-    <div class="pw-icon">🔒</div>
-    <h2>친목회 재정 관리</h2>
-    <p>접근하려면 비밀번호를 입력해 주세요</p>
-    <input type="password" id="pw-input" maxlength="10" placeholder="••••" onkeydown="if(event.key==='Enter')checkPW()">
-    <div class="pw-err" id="pw-err"></div>
-    <button class="pw-btn" onclick="checkPW()">확인</button>
-  </div>
-</div>
-
 <!-- ── 탭 비밀번호 모달 ── -->
 <div id="tab-pw-modal">
   <div class="tab-pw-box">
@@ -125,7 +99,7 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
   </div>
 </div>
 
-<div class="app" id="main-app" style="display:none">
+<div class="app" id="main-app">
 
 <!-- 로딩 오버레이 -->
 <div class="overlay" id="overlay">
@@ -293,33 +267,6 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
    비밀번호 설정
 ══════════════════════════════════════════════ */
 var PW = '7752';
-
-/* ── 페이지 진입 비밀번호 ── */
-function checkPW() {
-  var val = document.getElementById('pw-input').value;
-  var inp = document.getElementById('pw-input');
-  var err = document.getElementById('pw-err');
-  if (val === PW) {
-    document.getElementById('pw-screen').style.display = 'none';
-    document.getElementById('main-app').style.display = 'block';
-    // 항상 대시보드로 시작
-    document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
-    document.querySelectorAll('.tab').forEach(function(b){ b.classList.remove('active'); });
-    document.getElementById('tab-dash').classList.add('active');
-    document.getElementById('tab-btn-dash').classList.add('active');
-    loadAll();
-  } else {
-    err.textContent = '비밀번호가 틀렸습니다';
-    inp.classList.add('err');
-    inp.value = '';
-    setTimeout(function(){ inp.classList.remove('err'); err.textContent=''; }, 1500);
-    inp.focus();
-  }
-}
-document.getElementById('pw-input').focus();
-document.getElementById('pw-input').addEventListener('keydown', function(e){
-  if(e.key==='Enter') checkPW();
-});
 
 /* ── 탭 비밀번호 ── */
 var _pendingTab = null;
@@ -803,10 +750,11 @@ function setBtnLoading(id, loading) {
   }
 }
 
-/* ── 초기화 (비밀번호 통과 후 loadAll에서 호출됨) ── */
+/* ── 초기화 ── */
 document.getElementById('inc-date').value = today();
 document.getElementById('exp-date').value = today();
 document.getElementById('mem-joined').value = today();
+loadAll();
 </script>
 </body>
 </html>
