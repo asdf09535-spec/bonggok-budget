@@ -64,8 +64,7 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 @keyframes spin{to{transform:rotate(360deg)}}
 .overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.7);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:10px;font-size:14px;color:#2563eb}
 .overlay.show{display:flex}
-
-/* ── 탭 비밀번호 모달 ── */
+/* 비밀번호 모달 */
 #tab-pw-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:center;justify-content:center}
 #tab-pw-modal.open{display:flex}
 .tab-pw-box{background:#fff;border-radius:14px;padding:1.8rem 1.5rem;width:92%;max-width:320px;text-align:center}
@@ -74,8 +73,8 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 .tab-pw-box p{font-size:12px;color:#888;margin-bottom:1.2rem}
 .tab-pw-box input{width:100%;padding:9px 12px;border-radius:9px;border:1.5px solid #ddd;font-size:17px;text-align:center;letter-spacing:5px;color:#222;background:#fafafa;margin-bottom:8px;outline:none;transition:.2s}
 .tab-pw-box input:focus{border-color:#93c5fd;background:#fff}
-.tab-pw-box input.err{border-color:#fca5a5;animation:shake .3s}
-.tab-pw-box .pw-err{color:#dc2626;font-size:12px;height:14px;margin-bottom:6px}
+.tab-pw-box input.err{border-color:#fca5a5}
+.tab-pw-box .pw-err{color:#dc2626;font-size:12px;height:16px;margin-bottom:6px}
 .tab-pw-box .tab-pw-btns{display:flex;gap:8px}
 .tab-pw-box .tab-pw-btns button{flex:1;padding:9px;border-radius:9px;border:1px solid #ddd;font-size:13px;font-weight:600;cursor:pointer}
 .tab-pw-box .tab-pw-btns .confirm{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
@@ -84,13 +83,13 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 </head>
 <body>
 
-<!-- ── 탭 비밀번호 모달 ── -->
+<!-- 비밀번호 모달 -->
 <div id="tab-pw-modal">
   <div class="tab-pw-box">
     <div class="pw-icon">🔐</div>
     <h3 id="tab-pw-title">탭 전환</h3>
     <p>비밀번호를 입력해 주세요</p>
-    <input type="password" id="tab-pw-input" maxlength="10" placeholder="••••" onkeydown="if(event.key==='Enter')confirmTabPW()">
+    <input type="password" id="tab-pw-input" maxlength="10" placeholder="••••">
     <div class="pw-err" id="tab-pw-err"></div>
     <div class="tab-pw-btns">
       <button class="cancel" onclick="cancelTabPW()">취소</button>
@@ -99,9 +98,8 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
   </div>
 </div>
 
-<div class="app" id="main-app">
+<div class="app">
 
-<!-- 로딩 오버레이 -->
 <div class="overlay" id="overlay">
   <div class="spinner" style="width:28px;height:28px;border-width:3px"></div>
   <span id="overlay-msg">구글 시트에서 데이터를 불러오는 중...</span>
@@ -117,10 +115,10 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 
 <div style="margin-bottom:.6rem">
   <div class="tabs">
-    <button class="tab active" id="tab-btn-dash" onclick="requestTab('dash',this)">대시보드</button>
-    <button class="tab" id="tab-btn-income" onclick="requestTab('income',this)">수입</button>
-    <button class="tab" id="tab-btn-expense" onclick="requestTab('expense',this)">지출</button>
-    <button class="tab" id="tab-btn-members" onclick="requestTab('members',this)">회원</button>
+    <button class="tab active" id="tab-btn-dash"    onclick="requestTab('dash',this)">대시보드</button>
+    <button class="tab"        id="tab-btn-income"  onclick="requestTab('income',this)">수입</button>
+    <button class="tab"        id="tab-btn-expense" onclick="requestTab('expense',this)">지출</button>
+    <button class="tab"        id="tab-btn-members" onclick="requestTab('members',this)">회원</button>
   </div>
 </div>
 
@@ -263,28 +261,25 @@ textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ddd;fon
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-/* ══════════════════════════════════════════════
-   비밀번호 설정
-══════════════════════════════════════════════ */
+/* ── 비밀번호 설정 (여기서 변경) ── */
 var PW = '7752';
-
-/* ── 탭 비밀번호 ── */
-var _pendingTab = null;
-var _pendingBtn = null;
-// 대시보드는 비밀번호 없이 접근 가능, 수입/지출/회원만 요구
 var PROTECTED_TABS = ['income','expense','members'];
 
+/* ── 비밀번호 모달 ── */
+var _pendingTab = null;
+var _pendingBtnId = null; // 버튼 참조 대신 ID로 저장 (참조 오류 방지)
+
 function requestTab(t, btn) {
+  // 이미 활성화된 탭이면 무시
+  if (document.getElementById('tab-' + t).classList.contains('active')) return;
+
   if (PROTECTED_TABS.indexOf(t) === -1) {
-    // 대시보드: 바로 이동
-    showTab(t, btn);
+    doShowTab(t);
     return;
   }
-  // 이미 활성화된 탭이면 비밀번호 불필요
-  if (btn.classList.contains('active')) return;
-
+  // 비밀번호 필요
   _pendingTab = t;
-  _pendingBtn = btn;
+  _pendingBtnId = btn.id;
   var labels = {income:'수입', expense:'지출', members:'회원'};
   document.getElementById('tab-pw-title').textContent = '[' + (labels[t]||t) + '] 탭 열기';
   document.getElementById('tab-pw-input').value = '';
@@ -299,32 +294,42 @@ function confirmTabPW() {
   var err = document.getElementById('tab-pw-err');
   if (val === PW) {
     document.getElementById('tab-pw-modal').classList.remove('open');
-    showTab(_pendingTab, _pendingBtn);
-    _pendingTab = null; _pendingBtn = null;
+    doShowTab(_pendingTab);
+    _pendingTab = null;
+    _pendingBtnId = null;
   } else {
     err.textContent = '비밀번호가 틀렸습니다';
     inp.classList.add('err');
     inp.value = '';
-    setTimeout(function(){ inp.classList.remove('err'); err.textContent=''; }, 1500);
+    setTimeout(function(){ inp.classList.remove('err'); err.textContent = ''; }, 1500);
     inp.focus();
   }
 }
 
 function cancelTabPW() {
   document.getElementById('tab-pw-modal').classList.remove('open');
-  _pendingTab = null; _pendingBtn = null;
+  _pendingTab = null;
+  _pendingBtnId = null;
 }
 
-document.getElementById('tab-pw-input').addEventListener('keydown', function(e){
-  if(e.key==='Enter') confirmTabPW();
-  if(e.key==='Escape') cancelTabPW();
+document.getElementById('tab-pw-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') confirmTabPW();
+  if (e.key === 'Escape') cancelTabPW();
 });
 
-/* ══════════════════════════════════════════════
-   기존 앱 로직
-══════════════════════════════════════════════ */
-var API = 'https://script.google.com/macros/s/AKfycbyFpQccs6RJU9NKnsQH15nbiD95vvzZWZhxQccRauIvp5_9bJp1c3o4dXdpUf83SFZwzA/exec';
+/* ── 탭 전환 (내부) ── */
+function doShowTab(t) {
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('tab-' + t).classList.add('active');
+  document.getElementById('tab-btn-' + t).classList.add('active'); // ID로 직접 찾기
+  if (t === 'dash') renderDash();
+}
 
+/* ══════════════════════════════
+   구글 시트 API
+══════════════════════════════ */
+var API = 'https://script.google.com/macros/s/AKfycbyFpQccs6RJU9NKnsQH15nbiD95vvzZWZhxQccRauIvp5_9bJp1c3o4dXdpUf83SFZwzA/exec';
 var incomes = [], expenses = [], members = [];
 var editType = '', editId = '';
 var incCats = ['회비','기부금','이자','기타'];
@@ -333,7 +338,6 @@ var expCats = ['식비/행사','운영비','행사비','경조사','기타'];
 function fmt(n) { return '\u20A9' + Math.round(Number(n)||0).toLocaleString('ko-KR'); }
 function today() { return new Date().toISOString().slice(0,10); }
 
-/* ── API 호출 (JSONP) ── */
 var _cbIdx = 0;
 function api(params, cb) {
   var cbName = '_apicb' + (++_cbIdx);
@@ -361,17 +365,15 @@ function showOverlay(msg) {
   document.getElementById('overlay-msg').textContent = msg || '처리 중...';
   document.getElementById('overlay').classList.add('show');
 }
-function hideOverlay() {
-  document.getElementById('overlay').classList.remove('show');
-}
+function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
 
 function loadAll() {
   setStatus('loading', '동기화 중...');
   showOverlay('구글 시트에서 데이터를 불러오는 중...');
-  api({ action: 'init' }, function(err) {
+  api({ action: 'init' }, function() {
     api({ action: 'getAll' }, function(err, data) {
       hideOverlay();
-      if (err || data.error) {
+      if (err || !data || data.error) {
         setStatus('err', '연결 실패');
         alert('구글 시트 연결에 실패했습니다.\n인터넷 연결을 확인해 주세요.');
         return;
@@ -393,16 +395,6 @@ function normalize(r) {
   return r;
 }
 
-/* ── 탭 전환 (내부용 - 비밀번호 검증 후 호출) ── */
-function showTab(t, btn) {
-  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
-  document.querySelectorAll('.tab').forEach(function(b) { b.classList.remove('active'); });
-  document.getElementById('tab-' + t).classList.add('active');
-  btn.classList.add('active');
-  if (t === 'dash') renderDash();
-}
-
-/* ── 수입 추가 ── */
 function addIncome() {
   var d = document.getElementById('inc-date').value || today();
   var n = document.getElementById('inc-name').value.trim();
@@ -411,7 +403,7 @@ function addIncome() {
   var m = document.getElementById('inc-memo').value.trim();
   if (!n || !a) { alert('항목과 금액을 입력해 주세요'); return; }
   setBtnLoading('inc-add-btn', true);
-  api({ action: 'add', sheet: '수입내역', data: JSON.stringify({'날짜':d,'항목':n,'금액':a,'분류':c,'메모':m}) }, function(err, res) {
+  api({ action:'add', sheet:'수입내역', data:JSON.stringify({'날짜':d,'항목':n,'금액':a,'분류':c,'메모':m}) }, function(err, res) {
     setBtnLoading('inc-add-btn', false);
     if (err || !res || res.error) { alert('저장 실패. 다시 시도해 주세요.'); return; }
     document.getElementById('inc-name').value = '';
@@ -421,7 +413,6 @@ function addIncome() {
   });
 }
 
-/* ── 지출 추가 ── */
 function addExpense() {
   var d = document.getElementById('exp-date').value || today();
   var n = document.getElementById('exp-name').value.trim();
@@ -430,7 +421,7 @@ function addExpense() {
   var m = document.getElementById('exp-memo').value.trim();
   if (!n || !a) { alert('항목과 금액을 입력해 주세요'); return; }
   setBtnLoading('exp-add-btn', true);
-  api({ action: 'add', sheet: '지출내역', data: JSON.stringify({'날짜':d,'항목':n,'금액':a,'분류':c,'메모':m}) }, function(err, res) {
+  api({ action:'add', sheet:'지출내역', data:JSON.stringify({'날짜':d,'항목':n,'금액':a,'분류':c,'메모':m}) }, function(err, res) {
     setBtnLoading('exp-add-btn', false);
     if (err || !res || res.error) { alert('저장 실패. 다시 시도해 주세요.'); return; }
     document.getElementById('exp-name').value = '';
@@ -440,7 +431,6 @@ function addExpense() {
   });
 }
 
-/* ── 회원 추가 ── */
 function addMember() {
   var n = document.getElementById('mem-name').value.trim();
   var p = document.getElementById('mem-phone').value.trim();
@@ -448,7 +438,7 @@ function addMember() {
   var r = document.getElementById('mem-role').value.trim();
   if (!n) { alert('이름을 입력해 주세요'); return; }
   setBtnLoading('mem-add-btn', true);
-  api({ action: 'add', sheet: '회원목록', data: JSON.stringify({'이름':n,'연락처':p,'가입일':j,'역할':r}) }, function(err, res) {
+  api({ action:'add', sheet:'회원목록', data:JSON.stringify({'이름':n,'연락처':p,'가입일':j,'역할':r}) }, function(err, res) {
     setBtnLoading('mem-add-btn', false);
     if (err || !res || res.error) { alert('저장 실패. 다시 시도해 주세요.'); return; }
     document.getElementById('mem-name').value = '';
@@ -458,24 +448,22 @@ function addMember() {
   });
 }
 
-/* ── 삭제 ── */
 function delIncome(id) {
   if (!confirm('이 수입 내역을 삭제할까요?')) return;
   showOverlay('삭제 중...');
-  api({ action: 'delete', sheet: '수입내역', id: id }, function() { loadAll(); });
+  api({ action:'delete', sheet:'수입내역', id:id }, function() { loadAll(); });
 }
 function delExpense(id) {
   if (!confirm('이 지출 내역을 삭제할까요?')) return;
   showOverlay('삭제 중...');
-  api({ action: 'delete', sheet: '지출내역', id: id }, function() { loadAll(); });
+  api({ action:'delete', sheet:'지출내역', id:id }, function() { loadAll(); });
 }
 function delMember(id) {
   if (!confirm('이 회원을 삭제할까요?')) return;
   showOverlay('삭제 중...');
-  api({ action: 'delete', sheet: '회원목록', id: id }, function() { loadAll(); });
+  api({ action:'delete', sheet:'회원목록', id:id }, function() { loadAll(); });
 }
 
-/* ── 수정 모달 ── */
 function openEdit(type, id) {
   var arr = type === 'income' ? incomes : expenses;
   var rec = arr.find(function(x) { return String(x['id']) === String(id); });
@@ -487,9 +475,8 @@ function openEdit(type, id) {
   document.getElementById('modal-amount').value = rec['금액'] || '';
   document.getElementById('modal-memo').value = rec['메모'] || '';
   var cats = type === 'income' ? incCats : expCats;
-  var cur = rec['분류'] || cats[0];
   document.getElementById('modal-cat').innerHTML = cats.map(function(c) {
-    return '<option' + (c === cur ? ' selected' : '') + '>' + c + '</option>';
+    return '<option' + (c === (rec['분류']||cats[0]) ? ' selected' : '') + '>' + c + '</option>';
   }).join('');
   document.getElementById('edit-modal').classList.add('open');
 }
@@ -503,16 +490,14 @@ function saveEdit() {
   if (!n || !a) { alert('항목과 금액을 입력해 주세요'); return; }
   var sheet = editType === 'income' ? '수입내역' : '지출내역';
   setBtnLoading('modal-save-btn', true);
-  api({ action: 'update', sheet: sheet, id: editId, data: JSON.stringify({'날짜':d,'항목':n,'금액':a,'분류':c,'메모':m}) }, function(err, res) {
+  api({ action:'update', sheet:sheet, id:editId, data:JSON.stringify({'날짜':d,'항목':n,'금액':a,'분류':c,'메모':m}) }, function(err, res) {
     setBtnLoading('modal-save-btn', false);
     if (err || !res || res.error) { alert('수정 실패. 다시 시도해 주세요.'); return; }
-    closeModal();
-    loadAll();
+    closeModal(); loadAll();
   });
 }
 document.getElementById('edit-modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 
-/* ── 렌더링 ── */
 function renderIncome() {
   var tb = document.getElementById('income-tbody');
   var em = document.getElementById('income-empty');
@@ -520,8 +505,8 @@ function renderIncome() {
   em.style.display = 'none';
   var tot = 0;
   tb.innerHTML = incomes.map(function(r) {
-    tot += Number(r['금액']) || 0;
-    return '<tr><td>' + r['날짜'] + '</td><td>' + r['항목'] + '</td><td><span class="badge g">' + (r['분류']||'') + '</span></td><td>' + fmt(r['금액']) + '</td><td style="color:#888">' + (r['메모']||'') + '</td><td style="white-space:nowrap"><button class="edit-btn" onclick="openEdit(\'income\',\'' + r['id'] + '\')">수정</button><button class="del-btn" onclick="delIncome(\'' + r['id'] + '\')">삭제</button></td></tr>';
+    tot += Number(r['금액'])||0;
+    return '<tr><td>'+r['날짜']+'</td><td>'+r['항목']+'</td><td><span class="badge g">'+(r['분류']||'')+'</span></td><td>'+fmt(r['금액'])+'</td><td style="color:#888">'+(r['메모']||'')+'</td><td style="white-space:nowrap"><button class="edit-btn" onclick="openEdit(\'income\',\''+r['id']+'\')">수정</button><button class="del-btn" onclick="delIncome(\''+r['id']+'\')">삭제</button></td></tr>';
   }).join('');
   document.getElementById('inc-total').textContent = fmt(tot);
 }
@@ -532,8 +517,8 @@ function renderExpense() {
   em.style.display = 'none';
   var tot = 0;
   tb.innerHTML = expenses.map(function(r) {
-    tot += Number(r['금액']) || 0;
-    return '<tr><td>' + r['날짜'] + '</td><td>' + r['항목'] + '</td><td><span class="badge r">' + (r['분류']||'') + '</span></td><td>' + fmt(r['금액']) + '</td><td style="color:#888">' + (r['메모']||'') + '</td><td style="white-space:nowrap"><button class="edit-btn" onclick="openEdit(\'expense\',\'' + r['id'] + '\')">수정</button><button class="del-btn" onclick="delExpense(\'' + r['id'] + '\')">삭제</button></td></tr>';
+    tot += Number(r['금액'])||0;
+    return '<tr><td>'+r['날짜']+'</td><td>'+r['항목']+'</td><td><span class="badge r">'+(r['분류']||'')+'</span></td><td>'+fmt(r['금액'])+'</td><td style="color:#888">'+(r['메모']||'')+'</td><td style="white-space:nowrap"><button class="edit-btn" onclick="openEdit(\'expense\',\''+r['id']+'\')">수정</button><button class="del-btn" onclick="delExpense(\''+r['id']+'\')">삭제</button></td></tr>';
   }).join('');
   document.getElementById('exp-total').textContent = fmt(tot);
 }
@@ -541,10 +526,10 @@ function renderMembers() {
   var tb = document.getElementById('member-tbody');
   var em = document.getElementById('member-empty');
   document.getElementById('mem-count').textContent = members.length;
-  if (!members.length) { tb.innerHTML = ''; em.style.display = 'block'; return; }
+  if (!members.length) { tb.innerHTML = ''; em.style.display = 'block'; updateDash(); return; }
   em.style.display = 'none';
-  tb.innerHTML = members.map(function(r, i) {
-    return '<tr><td>' + (i+1) + '</td><td>' + r['이름'] + '</td><td style="color:#888">' + (r['연락처']||'') + '</td><td>' + (r['가입일']||'') + '</td><td>' + (r['역할']||'') + '</td><td><button class="del-btn" onclick="delMember(\'' + r['id'] + '\')">삭제</button></td></tr>';
+  tb.innerHTML = members.map(function(r,i) {
+    return '<tr><td>'+(i+1)+'</td><td>'+r['이름']+'</td><td style="color:#888">'+(r['연락처']||'')+'</td><td>'+(r['가입일']||'')+'</td><td>'+(r['역할']||'')+'</td><td><button class="del-btn" onclick="delMember(\''+r['id']+'\')">삭제</button></td></tr>';
   }).join('');
   updateDash();
 }
@@ -554,206 +539,145 @@ function updateDash() {
   document.getElementById('d-income').textContent = fmt(inc);
   document.getElementById('d-expense').textContent = fmt(exp);
   document.getElementById('d-balance').textContent = fmt(inc-exp);
-  document.getElementById('d-members').textContent = members.length + '명';
-  var tot = inc + exp;
-  document.getElementById('bar-income').style.width = (tot ? Math.round(inc/tot*100) : 0) + '%';
-  document.getElementById('bar-expense').style.width = (tot ? Math.round(exp/tot*100) : 0) + '%';
-  document.getElementById('bar-income-lbl').textContent = fmt(inc);
-  document.getElementById('bar-expense-lbl').textContent = fmt(exp);
+  document.getElementById('d-members').textContent = members.length+'명';
+  var tot = inc+exp;
+  document.getElementById('bar-income').style.width=(tot?Math.round(inc/tot*100):0)+'%';
+  document.getElementById('bar-expense').style.width=(tot?Math.round(exp/tot*100):0)+'%';
+  document.getElementById('bar-income-lbl').textContent=fmt(inc);
+  document.getElementById('bar-expense-lbl').textContent=fmt(exp);
 }
-
-/* ── 대시보드 최근 거래내역: 제한 없이 전체 표시 ── */
 function renderDash() {
   var all = [];
-  incomes.forEach(function(r){ all.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'income'}); });
-  expenses.forEach(function(r){ all.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'expense'}); });
-  all.sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
-  // 개수 제한 없이 전체 표시
+  incomes.forEach(function(r){all.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'income'});});
+  expenses.forEach(function(r){all.push({date:r['날짜'],name:r['항목'],amount:Number(r['금액'])||0,type:'expense'});});
+  all.sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
   var tb = document.getElementById('recent-tbody');
-  if (!all.length) {
-    tb.innerHTML = '<tr><td colspan="4" class="empty">거래 내역을 수입/지출 탭에서 추가해보세요</td></tr>';
-    updateDash();
-    return;
-  }
+  if (!all.length) { tb.innerHTML='<tr><td colspan="4" class="empty">거래 내역을 수입/지출 탭에서 추가해보세요</td></tr>'; updateDash(); return; }
   tb.innerHTML = all.map(function(r) {
-    var badge = r.type === 'income' ? '<span class="badge g">수입</span>' : '<span class="badge r">지출</span>';
-    var color = r.type === 'income' ? '#16a34a' : '#dc2626';
-    return '<tr><td>' + r.date + '</td><td>' + r.name + '</td><td style="color:' + color + ';font-weight:600">' + (r.type==='income'?'+':'-') + fmt(r.amount) + '</td><td>' + badge + '</td></tr>';
+    var badge = r.type==='income'?'<span class="badge g">수입</span>':'<span class="badge r">지출</span>';
+    var color = r.type==='income'?'#16a34a':'#dc2626';
+    return '<tr><td>'+r.date+'</td><td>'+r.name+'</td><td style="color:'+color+';font-weight:600">'+(r.type==='income'?'+':'-')+fmt(r.amount)+'</td><td>'+badge+'</td></tr>';
   }).join('');
   updateDash();
 }
 
-/* ── 회원 일괄 등록 ── */
 function importPaste() {
   var raw = document.getElementById('mem-paste').value.trim();
   if (!raw) { alert('붙여넣기 내용이 없습니다'); return; }
-  var rows = raw.split('\n').map(function(l) { return l.split('\t'); });
-  bulkAddMembers(rows);
+  bulkAddMembers(raw.split('\n').map(function(l){return l.split('\t');}));
 }
 function importMemberFile(input) {
   var file = input.files[0]; if (!file) return;
   var ext = file.name.split('.').pop().toLowerCase();
-  if (ext === 'csv') {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var lines = e.target.result.replace(/^\uFEFF/,'').split('\n').filter(Boolean);
-      var rows = skipHeader(lines.map(parseCSVLine));
-      bulkAddMembers(rows); };
+  if (ext==='csv') {
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var lines=e.target.result.replace(/^\uFEFF/,'').split('\n').filter(Boolean);
+      bulkAddMembers(skipHeader(lines.map(parseCSVLine)));
+    };
     reader.readAsText(file,'UTF-8');
   } else {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        var wb = XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-        var json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        var json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
         bulkAddMembers(skipHeader(json.map(function(r){return r.map(function(c){return String(c==null?'':c);});})));
-      } catch(e) { alert('파일 읽기 오류'); }
+      }catch(e){alert('파일 읽기 오류');}
     };
     reader.readAsArrayBuffer(file);
   }
-  input.value = '';
+  input.value='';
 }
-function skipHeader(rows) {
-  return rows.filter(function(r){ var f=String(r[0]||'').trim(); return f&&!/^(이름|no|번호|name)$/i.test(f); });
-}
+function skipHeader(rows){return rows.filter(function(r){var f=String(r[0]||'').trim();return f&&!/^(이름|no|번호|name)$/i.test(f);});}
 function bulkAddMembers(rows) {
-  var valid = [];
-  rows.forEach(function(cols) {
-    if (/^\d+$/.test(String(cols[0]||'').trim())) cols = cols.slice(1);
-    var name = String(cols[0]||'').trim(); if (!name) return;
-    var phone = String(cols[1]||'').trim();
-    var joined = String(cols[2]||'').trim().replace(/\./g,'-').replace(/\//g,'-');
-    if (/^\d{8}$/.test(joined)) joined = joined.slice(0,4)+'-'+joined.slice(4,6)+'-'+joined.slice(6,8);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(joined)) joined = today();
-    var role = String(cols[3]||'').trim();
-    valid.push({'이름':name,'연락처':phone,'가입일':joined,'역할':role});
+  var valid=[];
+  rows.forEach(function(cols){
+    if(/^\d+$/.test(String(cols[0]||'').trim()))cols=cols.slice(1);
+    var name=String(cols[0]||'').trim();if(!name)return;
+    var phone=String(cols[1]||'').trim();
+    var joined=String(cols[2]||'').trim().replace(/\./g,'-').replace(/\//g,'-');
+    if(/^\d{8}$/.test(joined))joined=joined.slice(0,4)+'-'+joined.slice(4,6)+'-'+joined.slice(6,8);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(joined))joined=today();
+    valid.push({'이름':name,'연락처':phone,'가입일':joined,'역할':String(cols[3]||'').trim()});
   });
-  if (!valid.length) { alert('추가할 회원이 없습니다'); return; }
-  showOverlay(valid.length + '명 등록 중...');
-  var done = 0;
-  valid.forEach(function(data) {
-    api({ action:'add', sheet:'회원목록', data: JSON.stringify(data) }, function() {
+  if(!valid.length){alert('추가할 회원이 없습니다');return;}
+  showOverlay(valid.length+'명 등록 중...');
+  var done=0;
+  valid.forEach(function(data){
+    api({action:'add',sheet:'회원목록',data:JSON.stringify(data)},function(){
       done++;
-      if (done === valid.length) {
-        document.getElementById('mem-paste').value = '';
-        var msg = document.getElementById('paste-msg');
-        msg.textContent = valid.length + '명 추가 완료!';
-        setTimeout(function(){msg.textContent='';}, 3000);
+      if(done===valid.length){
+        document.getElementById('mem-paste').value='';
+        var msg=document.getElementById('paste-msg');
+        msg.textContent=valid.length+'명 추가 완료!';
+        setTimeout(function(){msg.textContent='';},3000);
         loadAll();
       }
     });
   });
 }
-function downloadMemberTemplate() {
-  var rows = [['이름','연락처','가입일','역할'],['홍길동','010-1234-5678','2025-01-01','회장']];
-  downloadCSV('회원등록_양식.csv', rows.map(function(r){return r.join(',');}).join('\n'));
+function downloadMemberTemplate(){
+  downloadCSV('회원등록_양식.csv',[['이름','연락처','가입일','역할'],['홍길동','010-1234-5678','2025-01-01','회장']].map(function(r){return r.join(',');}).join('\n'));
 }
 
-/* ── CSV 유틸 ── */
-function parseCSVLine(line) {
-  var result=[],cur='',inQ=false;
-  for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){result.push(cur);cur='';}else cur+=c;}
-  result.push(cur); return result;
-}
-function toCSV(rows) {
-  return rows.map(function(r){
-    return r.map(function(c){
-      var s=String(c==null?'':c);
-      if(s.indexOf(',')>-1||s.indexOf('"')>-1||s.indexOf('\n')>-1) s='"'+s.replace(/"/g,'""')+'"';
-      return s;
-    }).join(',');
-  }).join('\n');
-}
-function downloadCSV(filename, content) {
-  var blob = new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8;'});
-  var a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
-}
+function parseCSVLine(line){var result=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){result.push(cur);cur='';}else cur+=c;}result.push(cur);return result;}
+function toCSV(rows){return rows.map(function(r){return r.map(function(c){var s=String(c==null?'':c);if(s.indexOf(',')>-1||s.indexOf('"')>-1||s.indexOf('\n')>-1)s='"'+s.replace(/"/g,'""')+'"';return s;}).join(',');}).join('\n');}
+function downloadCSV(filename,content){var blob=new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();}
 
-/* ── 이전 CSV 불러오기 ── */
 function importLegacyCSV(input) {
-  var file = input.files[0]; if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var text = e.target.result.replace(/^\uFEFF/,'');
-    var lines = text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
-    var newInc=[], newExp=[], newMem=[], section='';
-    for (var i=0; i<lines.length; i++) {
-      var cols = parseCSVLine(lines[i]);
-      var first = cols[0]||'';
-      if (first==='[수입 내역]'){section='income';continue;}
-      if (first==='[지출 내역]'){section='expense';continue;}
-      if (first==='[회원 목록]'){section='members';continue;}
-      if (/^\[/.test(first)){section='other';continue;}
-      if (['날짜','No','','합계','총 수입','총 지출','현재 잔액','총 회원'].indexOf(first)>-1) continue;
-      if (section==='income' && cols.length>=3) {
-        var a=parseFloat(String(cols[2]||'').replace(/,/g,''))||0;
-        if (a>0) newInc.push({'날짜':cols[0],'항목':cols[1],'금액':a,'분류':cols[3]||'기타','메모':cols[4]||''});
-      } else if (section==='expense' && cols.length>=3) {
-        var a=parseFloat(String(cols[2]||'').replace(/,/g,''))||0;
-        if (a>0) newExp.push({'날짜':cols[0],'항목':cols[1],'금액':a,'분류':cols[3]||'기타','메모':cols[4]||''});
-      } else if (section==='members' && cols[1]) {
-        newMem.push({'이름':cols[1],'연락처':cols[2]||'','가입일':cols[3]||today(),'역할':cols[4]||''});
-      }
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var lines=e.target.result.replace(/^\uFEFF/,'').split('\n').map(function(l){return l.trim();}).filter(Boolean);
+    var newInc=[],newExp=[],newMem=[],section='';
+    for(var i=0;i<lines.length;i++){
+      var cols=parseCSVLine(lines[i]);var first=cols[0]||'';
+      if(first==='[수입 내역]'){section='income';continue;}
+      if(first==='[지출 내역]'){section='expense';continue;}
+      if(first==='[회원 목록]'){section='members';continue;}
+      if(/^\[/.test(first)){section='other';continue;}
+      if(['날짜','No','','합계','총 수입','총 지출','현재 잔액','총 회원'].indexOf(first)>-1)continue;
+      if(section==='income'&&cols.length>=3){var a=parseFloat(String(cols[2]||'').replace(/,/g,''))||0;if(a>0)newInc.push({'날짜':cols[0],'항목':cols[1],'금액':a,'분류':cols[3]||'기타','메모':cols[4]||''});}
+      else if(section==='expense'&&cols.length>=3){var a=parseFloat(String(cols[2]||'').replace(/,/g,''))||0;if(a>0)newExp.push({'날짜':cols[0],'항목':cols[1],'금액':a,'분류':cols[3]||'기타','메모':cols[4]||''});}
+      else if(section==='members'&&cols[1]){newMem.push({'이름':cols[1],'연락처':cols[2]||'','가입일':cols[3]||today(),'역할':cols[4]||''});}
     }
-    var total = newInc.length + newExp.length + newMem.length;
-    if (!total) { alert('불러올 데이터가 없습니다.\n전체 통합 CSV 파일인지 확인해 주세요.'); input.value=''; return; }
-    if (!confirm('구글 시트에 추가할까요?\n수입 '+newInc.length+'건 / 지출 '+newExp.length+'건 / 회원 '+newMem.length+'명\n\n※ 기존 데이터에 추가됩니다.')) { input.value=''; return; }
-    showOverlay('구글 시트에 업로드 중... (0/' + total + ')');
-    var done = 0;
-    function next(arr, sheet) {
-      arr.forEach(function(data) {
-        api({ action:'add', sheet:sheet, data:JSON.stringify(data) }, function() {
-          done++;
-          document.getElementById('overlay-msg').textContent = '구글 시트에 업로드 중... (' + done + '/' + total + ')';
-          if (done === total) { loadAll(); alert('업로드 완료! 수입 '+newInc.length+'건 / 지출 '+newExp.length+'건 / 회원 '+newMem.length+'명'); }
-        });
-      });
-    }
-    next(newInc, '수입내역');
-    next(newExp, '지출내역');
-    next(newMem, '회원목록');
-    input.value = '';
+    var total=newInc.length+newExp.length+newMem.length;
+    if(!total){alert('불러올 데이터가 없습니다.');input.value='';return;}
+    if(!confirm('구글 시트에 추가할까요?\n수입 '+newInc.length+'건 / 지출 '+newExp.length+'건 / 회원 '+newMem.length+'명')){input.value='';return;}
+    showOverlay('업로드 중... (0/'+total+')');
+    var done=0;
+    function next(arr,sheet){arr.forEach(function(data){api({action:'add',sheet:sheet,data:JSON.stringify(data)},function(){done++;document.getElementById('overlay-msg').textContent='업로드 중... ('+done+'/'+total+')';if(done===total){loadAll();alert('업로드 완료!');}});});}
+    next(newInc,'수입내역');next(newExp,'지출내역');next(newMem,'회원목록');
+    input.value='';
   };
-  reader.readAsText(file, 'UTF-8');
+  reader.readAsText(file,'UTF-8');
 }
 
-/* ── 현재 데이터 CSV 내보내기 ── */
 function exportCurrentCSV() {
-  if (!incomes.length && !expenses.length && !members.length) { alert('저장된 데이터가 없습니다'); return; }
-  var inc = incomes.reduce(function(s,x){return s+(Number(x['금액'])||0);},0);
-  var exp = expenses.reduce(function(s,x){return s+(Number(x['금액'])||0);},0);
-  var rows = [];
-  rows.push(['[요약]']); rows.push(['총 수입',inc,'원']); rows.push(['총 지출',exp,'원']);
-  rows.push(['현재 잔액',inc-exp,'원']); rows.push(['총 회원',members.length,'명']); rows.push([]);
-  rows.push(['[수입 내역]']); rows.push(['날짜','항목','금액(원)','분류','메모']);
+  if(!incomes.length&&!expenses.length&&!members.length){alert('데이터가 없습니다');return;}
+  var inc=incomes.reduce(function(s,x){return s+(Number(x['금액'])||0);},0);
+  var exp=expenses.reduce(function(s,x){return s+(Number(x['금액'])||0);},0);
+  var rows=[['[요약]'],['총 수입',inc,'원'],['총 지출',exp,'원'],['현재 잔액',inc-exp,'원'],['총 회원',members.length,'명'],[]];
+  rows.push(['[수입 내역]'],['날짜','항목','금액(원)','분류','메모']);
   incomes.forEach(function(r){rows.push([r['날짜'],r['항목'],r['금액'],r['분류']||'',r['메모']||'']);});
-  rows.push(['','합계',inc,'','']); rows.push([]);
-  rows.push(['[지출 내역]']); rows.push(['날짜','항목','금액(원)','분류','메모']);
+  rows.push(['','합계',inc,'',''],[],'[지출 내역]',['날짜','항목','금액(원)','분류','메모']);
   expenses.forEach(function(r){rows.push([r['날짜'],r['항목'],r['금액'],r['분류']||'',r['메모']||'']);});
-  rows.push(['','합계',exp,'','']); rows.push([]);
-  rows.push(['[회원 목록]']); rows.push(['No','이름','연락처','가입일','역할']);
+  rows.push(['','합계',exp,'',''],[],'[회원 목록]',['No','이름','연락처','가입일','역할']);
   members.forEach(function(r,i){rows.push([i+1,r['이름'],r['연락처']||'',r['가입일']||'',r['역할']||'']);});
-  downloadCSV('친목회_재정관리_전체_'+today()+'.csv', toCSV(rows));
+  downloadCSV('친목회_재정관리_전체_'+today()+'.csv',toCSV(rows));
 }
 
-/* ── 버튼 로딩 ── */
-function setBtnLoading(id, loading) {
-  var btn = document.getElementById(id);
-  if (!btn) return;
-  btn.disabled = loading;
-  if (loading) btn.innerHTML = '<span class="spinner"></span>저장 중...';
-  else {
-    if (id==='inc-add-btn') btn.innerHTML = '+ 추가';
-    else if (id==='exp-add-btn') btn.innerHTML = '+ 추가';
-    else if (id==='mem-add-btn') btn.innerHTML = '+ 등록';
-    else if (id==='modal-save-btn') btn.innerHTML = '저장';
-  }
+function setBtnLoading(id,loading){
+  var btn=document.getElementById(id);if(!btn)return;
+  btn.disabled=loading;
+  if(loading)btn.innerHTML='<span class="spinner"></span>저장 중...';
+  else{if(id==='inc-add-btn'||id==='exp-add-btn')btn.innerHTML='+ 추가';else if(id==='mem-add-btn')btn.innerHTML='+ 등록';else if(id==='modal-save-btn')btn.innerHTML='저장';}
 }
 
-/* ── 초기화 ── */
-document.getElementById('inc-date').value = today();
-document.getElementById('exp-date').value = today();
-document.getElementById('mem-joined').value = today();
+document.getElementById('inc-date').value=today();
+document.getElementById('exp-date').value=today();
+document.getElementById('mem-joined').value=today();
 loadAll();
 </script>
 </body>
